@@ -19,9 +19,7 @@ function MainLandingPage() {
     <div>
       <header className="header">
         <Link to="/" className="hover:opacity-80 transition-opacity">
-          <h1 className="flex items-center text-2xl font-bold">
-            <i className="fas fa-gamepad mr-2"></i> P2E Calculator
-          </h1>
+          <h1>P2E Calculator</h1>
         </Link>
         <button
           onClick={toggleTheme}
