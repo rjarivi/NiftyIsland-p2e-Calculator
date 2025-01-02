@@ -56,11 +56,10 @@ body {
 .bento-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1.5rem;
   padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
+  height: 500px; /* Set a fixed height to match the Discord container */
 }
 
 .sidebar {
@@ -74,7 +73,7 @@ body {
 .grid-item {
   background: var(--card-background);
   border-radius: 1rem;
-  padding: 3rem 2rem;
+  padding: 2rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
@@ -83,7 +82,6 @@ body {
   gap: 1.5rem;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
-  aspect-ratio: 16/9;
 }
 
 .grid-item:hover {
@@ -92,8 +90,42 @@ body {
 }
 
 .footer {
-  padding: 2rem;
+  padding: 3rem;
   text-align: center;
   background-color: var(--secondary-background);
   margin-top: 2rem;
+  position: relative;
+  bottom: -120px; /* Extend footer downwards */
+}
+
+/* Button hover effect */
+.link-button {
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.link-button:hover {
+  background: linear-gradient(90deg, #ffe500, #cf68fb, #4fffbc);
+  border: 2px solid transparent;
+  box-shadow: 0 0 10px rgba(255, 229, 0, 0.8), 0 0 20px rgba(207, 104, 251, 0.8), 0 0 30px rgba(79, 255, 188, 0.8);
+  transform: scale(1.5);
+}
+
+.link-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 0.5rem;
+  background: linear-gradient(90deg, #ffe500, #cf68fb, #4fffbc);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+.link-button:hover::before {
+  opacity: 1;
 }
