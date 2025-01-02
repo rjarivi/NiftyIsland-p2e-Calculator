@@ -36,16 +36,16 @@ function MainLandingPage() {
               <div className="bento-grid">
                 <Link to="/nifty-island-calculator" className="grid-item relative">
                   <img 
-                    src="./nifty-island-logo.svg" 
+                    src={niftyIslandLogo}
                     alt="Nifty Island Logo" 
-                    className="w-32 h-32 object-contain"
+                    className="w-32 h-32 object-contain relative z-10"
                   />
                   <img 
-                    src="./overlay.jpeg" 
+                    src={overlayImage}
                     alt="Overlay" 
                     className="absolute inset-0 w-full h-full object-cover opacity-70"
                   />
-                  <h2 className="text-xl font-bold">Calculator</h2>
+                  <h2 className="text-xl font-bold relative z-10">Calculator</h2>
                 </Link>
                 <div className="grid-item">
                   <h3 className="text-lg font-semibold text-gray-500 dark:text-gray-400">Coming Soon</h3>
