@@ -39,7 +39,7 @@ function MainLandingPage() {
                     <img 
                       src="/images/nifty-island-logo.svg" 
                       alt="Nifty Island Logo" 
-                      className="w-32 h-32 object-contain mb-4"
+                      className="w-48 h-48 object-contain mb-4"
                     />
                     <h2 className="text-xl font-bold relative z-10">Calculator</h2>
                   </div>
@@ -49,12 +49,6 @@ function MainLandingPage() {
                     className="absolute inset-0 w-full h-full object-cover opacity-50 transition-transform duration-300 group-hover:scale-110"
                   />
                 </Link>
-                <div className="grid-item">
-                  <h3 className="text-lg font-semibold text-gray-500 dark:text-gray-400">Coming Soon</h3>
-                </div>
-                <div className="grid-item">
-                  <h3 className="text-lg font-semibold text-gray-500 dark:text-gray-400">Coming Soon</h3>
-                </div>
                 <div className="grid-item">
                   <h3 className="text-lg font-semibold text-gray-500 dark:text-gray-400">Coming Soon</h3>
                 </div>
