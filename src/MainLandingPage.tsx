@@ -19,11 +19,13 @@ function MainLandingPage() {
     <div>
       <header className="header">
         <Link to="/" className="hover:opacity-80 transition-opacity">
-          <h1>P2E Calculator</h1>
+          <h1 className="flex items-center text-2xl font-bold">
+            <i className="fas fa-gamepad mr-2"></i> P2E Calculator
+          </h1>
         </Link>
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+          className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors link-button glow-effect"
         >
           {theme === 'light' ? '🌙' : '☀️'}
         </button>
@@ -32,16 +34,18 @@ function MainLandingPage() {
       <Routes>
         <Route path="/" element={
           <>
-            <div className="main-content">
+            <div className="main-content flex flex-row-reverse">
               <div className="bento-grid">
                 <Link to="/nifty-island-calculator" className="grid-item relative overflow-hidden group">
-                  <div className="relative z-10">
+                  <div className="relative z-10 p-4 flex flex-col justify-between h-full">
                     <img 
                       src="/images/nifty-island-logo.svg" 
                       alt="Nifty Island Logo" 
-                      className="w-48 h-48 object-contain mb-4"
+                      className="w-full h-auto object-contain"
                     />
-                    <h2 className="text-xl font-bold relative z-10">Calculator</h2>
+                    <Link to="/nifty-island-calculator" className="mt-4 inline-block w-full px-6 py-2 rounded-lg text-white font-bold text-lg transition-all bg-gradient-to-r from-[#ffe500] via-[#cf68fb] to-[#4fffbc] shadow-lg hover:shadow-xl link-button glow-effect">
+                      Calculate your earnings
+                    </Link>
                   </div>
                   <img 
                     src="/images/overlay.jpg" 
@@ -49,31 +53,33 @@ function MainLandingPage() {
                     className="absolute inset-0 w-full h-full object-cover opacity-50 transition-transform duration-300 group-hover:scale-110"
                   />
                 </Link>
-                <div className="grid-item">
+                <div className="grid-item text-center">
                   <h3 className="text-lg font-semibold text-gray-500 dark:text-gray-400">Coming Soon</h3>
+                  <p className="text-sm text-gray-400">Suggest which P2E Calculator Should we do via our discord</p>
                 </div>
               </div>
-              
-              <div className="sidebar">
-                <h2 className="text-xl font-bold mb-4">Join Our Community</h2>
-                <a 
-                  href="https://discord.gg/A4hB9AD49N" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="block mb-4 text-[#5865F2] hover:underline"
-                >
-                  Join Discord
-                </a>
-                <iframe 
-                  src="https://discord.com/widget?id=521986124743311360&theme=dark" 
-                  width="100%" 
-                  height="500" 
-                  allowTransparency={true} 
-                  frameBorder="0" 
-                  sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
-                  className="rounded-lg"
-                ></iframe>
-              </div>
+              <aside className="w-80 p-4 bg-[#16171D] text-white rounded-xl border border-[#262933] ml-[-50px]">
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-2">Join Our Community</h3>
+                  <a 
+                    href="https://discord.gg/A4hB9AD49N" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="block mb-4 text-[#5865F2] hover:underline"
+                  >
+                    Join Discord
+                  </a>
+                  <iframe 
+                    src="https://discord.com/widget?id=521986124743311360&theme=dark" 
+                    width="100%" 
+                    height="500" 
+                    allowTransparency={true} 
+                    frameBorder="0" 
+                    sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
+                    className="rounded-lg"
+                  ></iframe>
+                </div>
+              </aside>
             </div>
             <footer className="footer">
               <a 
