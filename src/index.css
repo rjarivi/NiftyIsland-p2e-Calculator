@@ -56,9 +56,11 @@ body {
 .bento-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 1.5rem;
   padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .sidebar {
@@ -72,7 +74,7 @@ body {
 .grid-item {
   background: var(--card-background);
   border-radius: 1rem;
-  padding: 2rem;
+  padding: 3rem 2rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
@@ -81,6 +83,7 @@ body {
   gap: 1.5rem;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
+  aspect-ratio: 16/9;
 }
 
 .grid-item:hover {
