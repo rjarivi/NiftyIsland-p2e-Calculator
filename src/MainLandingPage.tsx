@@ -32,20 +32,20 @@ function MainLandingPage() {
       <Routes>
         <Route path="/" element={
           <>
-           <div className="main-content">
+            <div className="main-content">
               <div className="bento-grid">
                 <Link to="/nifty-island-calculator" className="grid-item relative">
                   <img 
-                    src={niftyIslandLogo}
+                    src="https://imgur.com/xAooRAV" 
                     alt="Nifty Island Logo" 
-                    className="w-32 h-32 object-contain relative z-10"
+                    className="w-32 h-32 object-contain"
                   />
                   <img 
-                    src={overlayImage}
+                    src="https://imgur.com/BT2d0AH" 
                     alt="Overlay" 
                     className="absolute inset-0 w-full h-full object-cover opacity-70"
                   />
-                  <h2 className="text-xl font-bold relative z-10">Calculator</h2>
+                  <h2 className="text-xl font-bold">Calculator</h2>
                 </Link>
                 <div className="grid-item">
                   <h3 className="text-lg font-semibold text-gray-500 dark:text-gray-400">Coming Soon</h3>
