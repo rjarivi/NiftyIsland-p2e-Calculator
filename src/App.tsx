@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calculator, Coins, Palmtree, TrendingUp, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
+import { Calculator, Coins, Palmtree, TrendingUp, RefreshCw, ChevronDown, ChevronRight, ExternalLink, Plus, Minus } from 'lucide-react';
 
 // Play intensity configurations
 interface PlayIntensity {
@@ -48,6 +48,55 @@ const STAKE_EARN_RATES = [
   { threshold: 10000000, rate: 360, ratePerBloom: 0.36 }
 ];
 
+// Reusable Number Input Component
+interface NumberInputProps {
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  step?: number;
+  className?: string;
+  placeholder?: string;
+}
+
+const NumberInput: React.FC<NumberInputProps> = ({ value, onChange, min = 0, step = 1, className = "", placeholder }) => {
+  const handleDecrease = () => {
+    const newValue = Math.max(min, value - step);
+    // Fix floating point precision issues
+    onChange(parseFloat(newValue.toFixed(6)));
+  };
+
+  const handleIncrease = () => {
+    const newValue = value + step;
+    onChange(parseFloat(newValue.toFixed(6)));
+  };
+
+  return (
+    <div className={`flex items-center bg-[#262933] rounded-xl border border-[#363a47] focus-within:border-[#4fffbc] transition-colors h-12 ${className}`}>
+      <button
+        onClick={handleDecrease}
+        className="h-full aspect-square flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#2f3341] rounded-l-xl transition-colors flex-shrink-0"
+      >
+        <Minus className="w-4 h-4" />
+      </button>
+      <input
+        type="number"
+        min={min}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Math.max(min, parseFloat(e.target.value) || 0))}
+        className="flex-1 w-full bg-transparent text-center text-white font-mono focus:outline-none appearance-none min-w-0 h-full"
+        placeholder={placeholder}
+      />
+      <button
+        onClick={handleIncrease}
+        className="h-full aspect-square flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#2f3341] rounded-r-xl transition-colors flex-shrink-0"
+      >
+        <Plus className="w-4 h-4" />
+      </button>
+    </div>
+  );
+};
+
 function PlayToEarnCalculator() {
   const [currentPrice, setCurrentPrice] = React.useState(0.05);
   const [isLoadingPrice, setIsLoadingPrice] = React.useState(false);
@@ -56,8 +105,8 @@ function PlayToEarnCalculator() {
   const [selectedPalms, setSelectedPalms] = React.useState<{ tier: string; count: number }[]>([]);
   const [selectedTier, setSelectedTier] = React.useState('none');
   const [palmCount, setPalmCount] = React.useState(1);
-  const [stakeAmount, setStakeAmount] = React.useState(0); // Default from P2E Calculator.csv
-  const [compoundRate, setCompoundRate] = React.useState(100); // Default 100% compound
+  const [stakeAmount, setStakeAmount] = React.useState(0);
+  const [compoundRate, setCompoundRate] = React.useState(100);
   const [showDailyBreakdown, setShowDailyBreakdown] = React.useState(false);
   const [showCycleBreakdown, setShowCycleBreakdown] = React.useState(false);
   const [showYearlyBreakdown, setShowYearlyBreakdown] = React.useState(false);
@@ -81,20 +130,14 @@ function PlayToEarnCalculator() {
     fetchCurrentPrice();
   }, []);
 
-  React.useEffect(() => {
-    setCurrentPrice(0.05); // Set initial price
-  }, []);
-
   const calculateEarnRate = () => {
-    // Find the appropriate rate tier
     const applicableRate = STAKE_EARN_RATES
       .slice()
       .reverse()
       .find(tier => stakeAmount >= tier.threshold);
-    
+
     if (!applicableRate) return 1;
 
-    // For amounts between 1000 and 10000, interpolate between 2x and 8x
     if (stakeAmount >= 1000 && stakeAmount < 10000) {
       const position = (stakeAmount - 1000) / (10000 - 1000);
       return 2 + (position * (8 - 2));
@@ -104,12 +147,11 @@ function PlayToEarnCalculator() {
   };
 
   const calculateStakingCapBoost = (stakeAmount: number) => {
-    // CAP_BOOST = 5 * STAKED_ISLAND^0.36
     return Math.floor(5 * Math.pow(stakeAmount, 0.36));
   };
 
   const calculateMaxCap = () => {
-    const baseCap = 100; // Default cap for No Palm
+    const baseCap = 100;
     const stakingBoost = calculateStakingCapBoost(stakeAmount);
     const palmBoost = selectedPalms.reduce((acc, palm) => acc + PALM_TIERS[palm.tier].cap * palm.count, 0);
     return baseCap + stakingBoost + palmBoost;
@@ -120,30 +162,19 @@ function PlayToEarnCalculator() {
   const calculateEarnings = () => {
     const { bloomsPerDay, bloomsPerCycle } = playIntensity === 'custom' ? PLAY_INTENSITIES.custom : PLAY_INTENSITIES[playIntensity];
     const earnRate = calculateEarnRate();
-    
-    // Calculate base earnings
+
     const dailyBaseIsland = (bloomsPerDay * earnRate) / 1000;
     const cycleBaseIsland = (bloomsPerCycle * earnRate) / 1000;
-    
-    // Apply caps
+
     const dailyIsland = Math.min(dailyBaseIsland, maxCap / 10);
     const cycleIsland = Math.min(cycleBaseIsland, maxCap);
-    
-    // Calculate USD values
+
     const dailyUSD = dailyIsland * currentPrice;
     const cycleUSD = cycleIsland * currentPrice;
 
     return {
-      daily: {
-        baseIsland: dailyBaseIsland,
-        island: dailyIsland,
-        usd: dailyUSD
-      },
-      cycle: {
-        baseIsland: cycleBaseIsland,
-        island: cycleIsland,
-        usd: cycleUSD
-      }
+      daily: { baseIsland: dailyBaseIsland, island: dailyIsland, usd: dailyUSD },
+      cycle: { baseIsland: cycleBaseIsland, island: cycleIsland, usd: cycleUSD }
     };
   };
 
@@ -161,277 +192,354 @@ function PlayToEarnCalculator() {
   const earnings = calculateEarnings();
 
   return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Coins className="w-5 h-5 text-[#ffe500]" />
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full overflow-hidden">
+      {/* Left Column: Inputs */}
+      <div className="lg:col-span-4 flex flex-col gap-6 overflow-y-auto pr-2">
+        {/* Token Price Card */}
+        <div className="bg-[#16171D]/80 backdrop-blur-md p-6 rounded-2xl border border-[#262933] shadow-xl">
+          <h2 className="text-lg font-semibold flex items-center gap-2 mb-2 text-[#ffe500]">
+            <Coins className="w-5 h-5" />
             Token Price
           </h2>
-          <div className="space-y-2">
-            <p className="text-gray-400">Current ISLAND Price or Enter Future Price Prediction:</p>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min="0"
-                step="0.000001"
+          <p className="text-sm text-gray-400 mb-4">Current ISLAND Price or Enter Future Price Prediction:</p>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10">$</span>
+              <NumberInput
                 value={currentPrice}
-                onChange={(e) => setCurrentPrice(Math.max(0, parseFloat(e.target.value) || 0))}
-                className="w-full px-4 py-2 rounded-lg bg-[#262933] border border-[#363a47] focus:outline-none focus:border-[#4fffbc]"
-                placeholder="Enter price"
+                onChange={setCurrentPrice}
+                step={0.000001}
+                className="pl-6"
               />
-              <button
-                onClick={fetchCurrentPrice}
-                disabled={isLoadingPrice}
-                className="p-2 rounded-lg bg-[#262933] border border-[#363a47] hover:bg-[#2f3341] transition-colors disabled:opacity-50"
-              >
-                <RefreshCw className={`w-5 h-5 text-[#4fffbc] ${isLoadingPrice ? 'animate-spin' : ''}`} />
-              </button>
             </div>
+            <button
+              onClick={fetchCurrentPrice}
+              disabled={isLoadingPrice}
+              className="p-3 rounded-xl bg-[#262933] border border-[#363a47] hover:bg-[#2f3341] transition-colors disabled:opacity-50 group"
+            >
+              <RefreshCw className={`w-5 h-5 text-[#4fffbc] ${isLoadingPrice ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+            </button>
           </div>
         </div>
 
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Calculator className="w-5 h-5 text-[#cf68fb]" />
+        {/* Play Intensity Card */}
+        <div className="bg-[#16171D]/80 backdrop-blur-md p-6 rounded-2xl border border-[#262933] shadow-xl">
+          <h2 className="text-lg font-semibold flex items-center gap-2 mb-2 text-[#cf68fb]">
+            <Calculator className="w-5 h-5" />
             Play Intensity
           </h2>
-          <p className="text-sm text-gray-400 mt-1">Choose your desired daily play intensity. More play means more gains!</p>
-          <div className="relative">
+          <p className="text-sm text-gray-400 mb-4">Choose your desired daily play intensity. More play means more gains!</p>
+          <div className="space-y-4">
             {playIntensity === 'custom' ? (
               <div className="flex gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="Enter daily blooms"
+                <NumberInput
                   value={customBlooms}
-                  onChange={(e) => {
-                    const value = Math.max(0, parseInt(e.target.value) || 0);
-                    setCustomBlooms(value);
-                    PLAY_INTENSITIES.custom.bloomsPerDay = value;
-                    PLAY_INTENSITIES.custom.bloomsPerCycle = value * 10;
+                  onChange={(val) => {
+                    setCustomBlooms(val);
+                    PLAY_INTENSITIES.custom.bloomsPerDay = val;
+                    PLAY_INTENSITIES.custom.bloomsPerCycle = val * 10;
                   }}
-                  className="w-full px-4 py-2 rounded-lg bg-[#262933] border border-[#363a47] focus:outline-none focus:border-[#4fffbc]"
+                  step={100}
+                  placeholder="Daily blooms"
+                  className="flex-1"
                 />
                 <button
                   onClick={() => setPlayIntensity('casual')}
-                  className="px-4 py-2 rounded-lg bg-[#262933] border border-[#363a47] hover:bg-[#2f3341] transition-colors"
+                  className="px-4 py-2 rounded-xl bg-[#262933] border border-[#363a47] hover:bg-[#2f3341] transition-colors text-sm"
                 >
                   Cancel
                 </button>
               </div>
             ) : (
-              <select
-                value={playIntensity}
-                onChange={(e) => {
-                  setPlayIntensity(e.target.value);
-                  if (e.target.value === 'custom') {
-                    setCustomBlooms(0);
-                  }
-                }}
-                className="w-full px-4 py-2 rounded-lg bg-[#262933] border border-[#363a47] focus:outline-none focus:border-[#4fffbc]"
-              >
-                {Object.entries(PLAY_INTENSITIES).map(([key, value]) => (
-                  <option key={key} value={key}>
-                    {value.name}{key !== 'custom' ? ` - ${value.bloomsPerDay.toLocaleString()} Blooms/Day` : ''}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={playIntensity}
+                  onChange={(e) => {
+                    setPlayIntensity(e.target.value);
+                    if (e.target.value === 'custom') setCustomBlooms(0);
+                  }}
+                  className="w-full px-4 py-3 rounded-xl bg-[#262933] border border-[#363a47] focus:outline-none focus:border-[#4fffbc] text-white appearance-none cursor-pointer"
+                >
+                  {Object.entries(PLAY_INTENSITIES).map(([key, value]) => (
+                    <option key={key} value={key}>
+                      {value.name}{key !== 'custom' ? ` - ${value.bloomsPerDay.toLocaleString()} Blooms/Day` : ''}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
             )}
             {playIntensity === 'custom' && customBlooms > 0 && (
-              <p className="text-sm text-gray-400 mt-1">
-                Cycle blooms (10 days): {(customBlooms * 10).toLocaleString()}
+              <p className="text-sm text-gray-400 bg-[#262933] p-3 rounded-lg">
+                Cycle blooms (10 days): <span className="text-white font-mono">{(customBlooms * 10).toLocaleString()}</span>
               </p>
             )}
           </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-[#cf68fb]" />
+        {/* Staking Boost Card */}
+        <div className="bg-[#16171D]/80 backdrop-blur-md p-6 rounded-2xl border border-[#262933] shadow-xl flex-1">
+          <h2 className="text-lg font-semibold flex items-center gap-2 mb-2 text-[#4fffbc]">
+            <TrendingUp className="w-5 h-5" />
             Staking Boost
           </h2>
-          <p className="text-sm text-gray-400 mt-1">Enter the amount to check the benefits of your stake</p>
-          <input
-            type="number"
-            min="0"
-            step="0.000000001"
-            value={stakeAmount}
-            onChange={(e) => setStakeAmount(Math.max(0, parseFloat(e.target.value)))}
-            className="w-full px-4 py-2 rounded-lg bg-[#262933] border border-[#363a47] focus:outline-none focus:border-[#4fffbc]"
-            placeholder="Enter stake amount"
-          />
-          <p className="text-sm text-gray-400 mt-1">≈ ${(stakeAmount * currentPrice).toFixed(2)}</p>
-          <div>
-            <label className="block text-sm font-medium mb-1">Compound Rate: {compoundRate}%</label>
-            <div className="relative h-2 mb-8">
-              <div className="absolute inset-0 bg-[#262933] rounded-lg overflow-hidden">
-                <div 
-                  className="absolute inset-0 rounded-lg"
-                  style={{
-                    width: `${compoundRate}%`,
-                    background: 'linear-gradient(to right, #ffe500, #cf68fb, #4fffbc)'
-                  }}
-                />
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={compoundRate}
-                onChange={(e) => setCompoundRate(parseInt(e.target.value))}
-                className="absolute inset-0 w-full appearance-none bg-transparent cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:translate-y-[-1px] [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:shadow-md [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:translate-y-[-1px]"
+          <p className="text-sm text-gray-400 mb-4">Enter the amount to check the benefits of your stake</p>
+          <div className="space-y-6">
+            <div>
+              <label className="text-sm text-gray-400 mb-2 block">Staked Amount</label>
+              <NumberInput
+                value={stakeAmount}
+                onChange={setStakeAmount}
+                step={100}
+                placeholder="0"
               />
-              <div className="absolute w-full flex justify-between text-xs text-gray-400" style={{ top: '16px' }}>
-                <span>0%</span>
-                <span>50%</span>
-                <span>100%</span>
+              <p className="text-xs text-gray-500 mt-2 text-right">≈ ${(stakeAmount * currentPrice).toFixed(2)}</p>
+            </div>
+
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-gray-400">Compound Rate: {compoundRate}%</span>
+              </div>
+              <div className="relative h-4 mb-6 select-none">
+                {/* Track */}
+                <div className="absolute top-1/2 left-0 w-full h-2 -mt-1 bg-[#262933] rounded-full overflow-hidden">
+                  <div
+                    className="h-full"
+                    style={{ width: `${compoundRate}%`, background: 'linear-gradient(90deg, #ffe500, #cf68fb, #4fffbc)' }}
+                  />
+                </div>
+                {/* Thumb (Visual only) */}
+                <div
+                  className="absolute top-1/2 w-4 h-4 -mt-2 bg-white rounded-full shadow-md pointer-events-none"
+                  style={{ left: `calc(${compoundRate}% - 8px)` }}
+                />
+                {/* Interaction Layer */}
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={compoundRate}
+                  onChange={(e) => setCompoundRate(parseInt(e.target.value))}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                {/* Labels */}
+                <div className="absolute top-6 w-full flex justify-between text-xs text-gray-400">
+                  <span>0%</span>
+                  <span>50%</span>
+                  <span>100%</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
+      {/* Middle Column: Palms & Cap */}
+      <div className="lg:col-span-4 flex flex-col gap-6 overflow-y-auto pr-2">
+        <div className="bg-[#16171D]/80 backdrop-blur-md p-6 rounded-2xl border border-[#262933] shadow-xl h-full">
+          <h2 className="text-lg font-semibold flex items-center gap-2 mb-2 text-white">
             <Palmtree className="w-5 h-5 text-[#4fffbc]" />
             Legendary Palms NFT
           </h2>
-          <p className="text-sm text-gray-400">Each Palm NFT you own increases your maximum ISLAND gains per cycle.</p>
-          <div className="flex items-center gap-2">
-            <select
-              value={selectedTier}
-              onChange={(e) => setSelectedTier(e.target.value)}
-              className="w-full px-4 py-2 rounded-lg bg-[#262933] border border-[#363a47] focus:outline-none focus:border-[#4fffbc]"
-            >
-              {Object.entries(PALM_TIERS).map(([tier, { name, cap }]) => (
-                <option key={tier} value={tier}>
-                  {name} - {cap} cap
-                </option>
-              ))}
-            </select>
-            <input
-              type="number"
-              min="1"
-              value={palmCount}
-              onChange={(e) => setPalmCount(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-20 px-4 py-2 rounded-lg bg-[#262933] border border-[#363a47] focus:outline-none focus:border-[#4fffbc]"
-            />
+          <p className="text-sm text-gray-400 mb-4">Each Palm NFT you own increases your maximum ISLAND gains per cycle.</p>
+
+          <div className="flex gap-2 mb-6">
+            <div className="relative flex-1">
+              <select
+                value={selectedTier}
+                onChange={(e) => setSelectedTier(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-[#262933] border border-[#363a47] focus:outline-none focus:border-[#4fffbc] text-white appearance-none cursor-pointer"
+              >
+                {Object.entries(PALM_TIERS).map(([tier, { name, cap }]) => (
+                  <option key={tier} value={tier}>
+                    {name} (+{cap} Cap)
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
+            <div className="w-32">
+              <NumberInput
+                value={palmCount}
+                onChange={(val) => setPalmCount(Math.max(1, val))}
+                min={1}
+              />
+            </div>
             <button
               onClick={handleAddPalm}
-              className="p-2 rounded-lg bg-[#262933] border border-[#363a47] hover:bg-[#2f3341] transition-colors"
+              className="w-24 rounded-xl bg-[#4fffbc]/10 text-[#4fffbc] border border-[#4fffbc]/20 hover:bg-[#4fffbc]/20 transition-colors font-medium flex items-center justify-center"
             >
               Add
             </button>
           </div>
-          <p className="text-sm text-gray-400 text-left">The initial cycle cap is 100 ISLAND. This cap increases based on your staking amount and Palm NFTs.</p>
-          <div className="space-y-1 mt-2">
-            <p className="text-sm font-medium text-left">Cycle Cap Breakdown:</p>
-            <div className="text-sm text-gray-400">
-              <div className="flex justify-between">
-                <span>Base Cap:</span>
-                <span>100 ISLAND</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Staking Boost:</span>
-                <span>+{calculateStakingCapBoost(stakeAmount)} ISLAND</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Palm NFT Boost:</span>
-                <span>+{selectedPalms.reduce((acc, palm) => acc + PALM_TIERS[palm.tier].cap * palm.count, 0)} ISLAND</span>
-              </div>
-              <div className="flex justify-between font-medium text-[#4fffbc]">
-                <span>Total Cap:</span>
-                <span>{maxCap.toLocaleString()} ISLAND</span>
-              </div>
+
+          {selectedPalms.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-6">
+              {selectedPalms.map((palm, index) => (
+                <div key={index} className="flex items-center gap-2 bg-[#262933] px-3 py-1.5 rounded-lg border border-[#363a47] animate-fadeIn">
+                  <span className="text-sm text-gray-300">{PALM_TIERS[palm.tier].name} <span className="text-[#4fffbc]">x{palm.count}</span></span>
+                  <button
+                    onClick={() => handleRemovePalm(index)}
+                    className="text-gray-500 hover:text-red-400 transition-colors ml-1"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
             </div>
-          </div>
-          <p className="text-sm font-medium text-left">Current Cycle Cap: {maxCap.toLocaleString()} ISLAND</p>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {selectedPalms.map((palm, index) => (
-              <div key={index} className="flex items-center gap-2 bg-[#262933] px-3 py-1 rounded-lg">
-                <span className="text-[#4fffbc]">{PALM_TIERS[palm.tier].name} x {palm.count}</span>
-                <button
-                  onClick={() => handleRemovePalm(index)}
-                  className="text-red-500 hover:underline"
-                >
-                  x
-                </button>
-              </div>
-            ))}
+          )}
+
+          <p className="text-sm text-gray-400 mb-4">The initial cycle cap is 100 ISLAND. This cap increases based on your staking amount and Palm NFTs.</p>
+
+          <div className="bg-[#262933]/50 rounded-xl p-4 space-y-4 border border-[#363a47]">
+            <p className="text-sm font-bold text-white">Cycle Cap Breakdown:</p>
+
+            <div className="space-y-1">
+              <p className="text-xs text-gray-400">Base Cap:</p>
+              <p className="text-sm font-mono text-white">100 ISLAND</p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-xs text-gray-400">Staking Boost:</p>
+              <p className="text-sm font-mono text-[#cf68fb]">+{calculateStakingCapBoost(stakeAmount).toLocaleString()} ISLAND</p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-xs text-gray-400">Palm NFT Boost:</p>
+              <p className="text-sm font-mono text-[#4fffbc]">+{selectedPalms.reduce((acc, palm) => acc + PALM_TIERS[palm.tier].cap * palm.count, 0).toLocaleString()} ISLAND</p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-xs text-gray-400">Total Cap:</p>
+              <p className="text-sm font-mono text-[#4fffbc] font-bold">{maxCap.toLocaleString()} ISLAND</p>
+            </div>
+
+            <div className="pt-2 border-t border-[#363a47]">
+              <p className="text-sm font-bold text-white">Current Cycle Cap: {maxCap.toLocaleString()} ISLAND</p>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="p-6 bg-[#262933] rounded-xl mt-6">
-        <h3 className="text-lg font-medium mb-4">Earnings Estimate</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-[#16171D] p-4 rounded-lg">
-            <h4 className="text-sm font-medium mb-2">Daily Earnings</h4>
-            <div className="space-y-1">
-              <div className="flex justify-between items-center">
-                <span className="text-2xl font-bold text-[#4fffbc]">{earnings.daily.island.toFixed(2)} ISLAND</span>
-                <button onClick={() => setShowDailyBreakdown(!showDailyBreakdown)}>
-                  {showDailyBreakdown ? <ChevronDown className="text-gray-400" /> : <ChevronRight className="text-gray-400" />}
+      {/* Right Column: Earnings & Promos */}
+      <div className="lg:col-span-4 flex flex-col gap-6 overflow-y-auto pr-2">
+        {/* Earnings Card */}
+        <div className="bg-[#16171D]/80 backdrop-blur-md p-6 rounded-2xl border border-[#262933] shadow-xl">
+          <h2 className="text-lg font-semibold mb-6 text-white">Earnings Estimate</h2>
+          <div className="space-y-4">
+            {/* Daily */}
+            <div className="bg-[#262933] p-4 rounded-xl border border-[#363a47] hover:border-[#4fffbc]/30 transition-colors group">
+              <div className="flex justify-between items-start mb-1">
+                <span className="text-sm text-gray-400">Daily Earnings</span>
+                <button onClick={() => setShowDailyBreakdown(!showDailyBreakdown)} className="text-gray-500 hover:text-white">
+                  {showDailyBreakdown ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                 </button>
               </div>
+              <div className="text-2xl font-bold text-[#4fffbc] mb-1 font-mono">
+                {earnings.daily.island.toFixed(2)} <span className="text-sm font-sans font-normal text-gray-500">ISLAND</span>
+              </div>
+              <div className="text-sm text-gray-500">≈ ${earnings.daily.usd.toFixed(2)}</div>
               {showDailyBreakdown && (
-                <div className="text-gray-400">
-                  <p>Pre-Cap: {earnings.daily.baseIsland.toFixed(2)} ISLAND</p>
-                  <p>After Cap: {earnings.daily.island.toFixed(2)} ISLAND</p>
+                <div className="mt-3 pt-3 border-t border-[#363a47] text-xs text-gray-400 space-y-1">
+                  <div className="flex justify-between"><span>Pre-Cap:</span> <span>{earnings.daily.baseIsland.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span>After Cap:</span> <span>{earnings.daily.island.toFixed(2)}</span></div>
                 </div>
               )}
-              <p className="text-gray-400">≈ ${earnings.daily.usd.toFixed(2)}</p>
             </div>
-          </div>
 
-          <div className="bg-[#16171D] p-4 rounded-lg">
-            <h4 className="text-sm font-medium mb-2">Cycle Earnings (10 days)</h4>
-            <div className="space-y-1">
-              <div className="flex justify-between items-center">
-                <span className="text-2xl font-bold text-[#4fffbc]">{earnings.cycle.island.toFixed(2)} ISLAND</span>
-                <button onClick={() => setShowCycleBreakdown(!showCycleBreakdown)}>
-                  {showCycleBreakdown ? <ChevronDown className="text-gray-400" /> : <ChevronRight className="text-gray-400" />}
+            {/* Cycle */}
+            <div className="bg-[#262933] p-4 rounded-xl border border-[#363a47] hover:border-[#cf68fb]/30 transition-colors group">
+              <div className="flex justify-between items-start mb-1">
+                <span className="text-sm text-gray-400">Cycle Earnings (10 days)</span>
+                <button onClick={() => setShowCycleBreakdown(!showCycleBreakdown)} className="text-gray-500 hover:text-white">
+                  {showCycleBreakdown ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                 </button>
               </div>
+              <div className="text-2xl font-bold text-[#4fffbc] mb-1 font-mono">
+                {earnings.cycle.island.toFixed(2)} <span className="text-sm font-sans font-normal text-gray-500">ISLAND</span>
+              </div>
+              <div className="text-sm text-gray-500">≈ ${earnings.cycle.usd.toFixed(2)}</div>
               {showCycleBreakdown && (
-                <div className="text-gray-400">
-                  <p>Pre-Cap: {earnings.cycle.baseIsland.toFixed(2)} ISLAND</p>
-                  <p>After Cap: {earnings.cycle.island.toFixed(2)} ISLAND</p>
+                <div className="mt-3 pt-3 border-t border-[#363a47] text-xs text-gray-400 space-y-1">
+                  <div className="flex justify-between"><span>Pre-Cap:</span> <span>{earnings.cycle.baseIsland.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span>After Cap:</span> <span>{earnings.cycle.island.toFixed(2)}</span></div>
                 </div>
               )}
-              <p className="text-gray-400">≈ ${earnings.cycle.usd.toFixed(2)}</p>
             </div>
-          </div>
 
-          <div className="bg-[#16171D] p-4 rounded-lg">
-            <h4 className="text-sm font-medium mb-2">Yearly Projected Earnings</h4>
-            <div className="space-y-1">
-              <div className="flex justify-between items-center">
-                <span className="text-2xl font-bold text-[#4fffbc]">{(earnings.cycle.island * 36.5).toFixed(2)} ISLAND</span>
-                <button onClick={() => setShowYearlyBreakdown(!showYearlyBreakdown)}>
-                  {showYearlyBreakdown ? <ChevronDown className="text-gray-400" /> : <ChevronRight className="text-gray-400" />}
+            {/* Yearly */}
+            <div className="bg-[#262933] p-4 rounded-xl border border-[#363a47] hover:border-[#ffe500]/30 transition-colors group">
+              <div className="flex justify-between items-start mb-1">
+                <span className="text-sm text-gray-400">Yearly Projection</span>
+                <button onClick={() => setShowYearlyBreakdown(!showYearlyBreakdown)} className="text-gray-500 hover:text-white">
+                  {showYearlyBreakdown ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                 </button>
               </div>
+              <div className="text-2xl font-bold text-[#4fffbc] mb-1 font-mono">
+                {(earnings.cycle.island * 36.5).toFixed(2)} <span className="text-sm font-sans font-normal text-gray-500">ISLAND</span>
+              </div>
+              <div className="text-sm text-gray-500">≈ ${(earnings.cycle.usd * 36.5).toFixed(2)}</div>
               {showYearlyBreakdown && (
-                <div className="text-gray-400">
-                  <p>Pre-Cap: {(earnings.cycle.baseIsland * 36.5).toFixed(2)} ISLAND</p>
-                  <p>After Cap: {(earnings.cycle.island * 36.5).toFixed(2)} ISLAND</p>
+                <div className="mt-3 pt-3 border-t border-[#363a47] text-xs text-gray-400 space-y-1">
+                  <div className="flex justify-between"><span>Pre-Cap:</span> <span>{(earnings.cycle.baseIsland * 36.5).toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span>After Cap:</span> <span>{(earnings.cycle.island * 36.5).toFixed(2)}</span></div>
                 </div>
               )}
-              <p className="text-gray-400">≈ ${(earnings.cycle.usd * 36.5).toFixed(2)}</p>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="text-sm text-gray-400">
-        <p className="mb-2">Disclaimers:</p>
-        <ul className="list-disc list-inside space-y-1">
-          <li>This calculator is for approximation purposes only and some error due to the exact time of staking and fluctuation of token price should be expected.</li>
-          <li>The P2E system earning rate and structure may change over time, so this version of the calculator may be outdated. The most recent info will be available on the Rewards Dashboard.</li>
-        </ul>
+        {/* Promo Cards */}
+        <div className="grid grid-cols-2 gap-4 mt-auto">
+          <div className="bg-[#16171D]/80 backdrop-blur-md rounded-2xl border border-[#262933] shadow-xl overflow-hidden flex flex-col">
+            <div className="h-32 overflow-hidden relative">
+              <img
+                src="https://pbs.twimg.com/media/GHMAcU7XgAAbm6M?format=jpg&name=small"
+                alt="FlashPoint"
+                className="w-full h-full object-cover transition-transform hover:scale-110 duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#16171D] to-transparent opacity-60" />
+              <div className="absolute bottom-2 left-3">
+                <h3 className="text-xs font-bold text-[#ffe500] uppercase tracking-wider">Featured</h3>
+              </div>
+            </div>
+            <div className="p-4 flex-1 flex flex-col">
+              <p className="font-semibold text-white mb-3">FlashPoint</p>
+              <a
+                href="https://niftyis.land/f7ash/flashpoint?ref=f7ash"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-auto flex items-center justify-center gap-2 w-full py-2 rounded-lg text-black font-bold text-sm transition-transform hover:scale-105 active:scale-95"
+                style={{ background: 'linear-gradient(90deg, #fde00a, #d373e4, #5bf1c2)' }}
+              >
+                Visit <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
+
+          <div className="bg-[#16171D]/80 backdrop-blur-md rounded-2xl border border-[#262933] shadow-xl overflow-hidden flex flex-col">
+            <div className="h-32 overflow-hidden relative">
+              <img
+                src="https://pbs.twimg.com/media/GxMQ43NWgAEIJd3?format=jpg&name=large"
+                alt="Your Island"
+                className="w-full h-full object-cover transition-transform hover:scale-110 duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#16171D] to-transparent opacity-60" />
+              <div className="absolute bottom-2 left-3">
+                <h3 className="text-xs font-bold text-[#cf68fb] uppercase tracking-wider">Promoted</h3>
+              </div>
+            </div>
+            <div className="p-4 flex-1 flex flex-col">
+              <p className="font-semibold text-white mb-3">Your Island</p>
+              <a
+                href="#"
+                className="mt-auto flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-[#262933] border border-[#363a47] text-white font-bold text-sm hover:bg-[#2f3341] transition-colors"
+              >
+                Contact Us
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -443,24 +551,13 @@ function StakeToEarnCalculator() {
   const [isLoadingPrice, setIsLoadingPrice] = React.useState(false);
 
   React.useEffect(() => {
-    setCurrentPrice(0.05); // Set initial price
+    setCurrentPrice(0.05);
   }, []);
 
-  const getUnlockedTiers = () => {
-    return STAKE_TIERS.filter(tier => stakeAmount >= tier.amount);
-  };
-
-  const getNextTier = () => {
-    return STAKE_TIERS.find(tier => stakeAmount < tier.amount);
-  };
-
-  const getBoostClass = (threshold: number) => {
-    return stakeAmount >= threshold ? "" : "opacity-50";
-  };
-
-  const CheckMark = () => (
-    <span className="text-green-500 mr-2">✔</span>
-  );
+  const getUnlockedTiers = () => STAKE_TIERS.filter(tier => stakeAmount >= tier.amount);
+  const getNextTier = () => STAKE_TIERS.find(tier => stakeAmount < tier.amount);
+  const getBoostClass = (threshold: number) => stakeAmount >= threshold ? "text-[#4fffbc]" : "text-gray-600";
+  const CheckMark = () => <span className="text-[#4fffbc] mr-2">✔</span>;
 
   const unlockedTiers = getUnlockedTiers();
   const nextTier = getNextTier();
@@ -481,272 +578,157 @@ function StakeToEarnCalculator() {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Coins className="w-5 h-5 text-[#ffe500]" />
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full overflow-hidden">
+      {/* Left Column: Inputs */}
+      <div className="lg:col-span-4 flex flex-col gap-6 overflow-y-auto pr-2">
+        <div className="bg-[#16171D]/80 backdrop-blur-md p-6 rounded-2xl border border-[#262933] shadow-xl">
+          <h2 className="text-lg font-semibold flex items-center gap-2 mb-2 text-[#ffe500]">
+            <Coins className="w-5 h-5" />
             Token Price
           </h2>
-          <div className="space-y-2">
-            <p className="text-gray-400">Current ISLAND Price or Enter Future Price Prediction:</p>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min="0"
-                step="0.000001"
+          <p className="text-sm text-gray-400 mb-4">Current ISLAND Price or Enter Future Price Prediction:</p>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10">$</span>
+              <NumberInput
                 value={currentPrice}
-                onChange={(e) => setCurrentPrice(Math.max(0, parseFloat(e.target.value) || 0))}
-                className="w-full px-4 py-2 rounded-lg bg-[#262933] border border-[#363a47] focus:outline-none focus:border-[#4fffbc]"
-                placeholder="Enter price"
+                onChange={setCurrentPrice}
+                step={0.000001}
+                className="pl-6"
               />
-              <button
-                onClick={fetchCurrentPrice}
-                disabled={isLoadingPrice}
-                className="p-2 rounded-lg bg-[#262933] border border-[#363a47] hover:bg-[#2f3341] transition-colors disabled:opacity-50"
-              >
-                <RefreshCw className={`w-5 h-5 text-[#4fffbc] ${isLoadingPrice ? 'animate-spin' : ''}`} />
-              </button>
             </div>
+            <button
+              onClick={fetchCurrentPrice}
+              disabled={isLoadingPrice}
+              className="p-3 rounded-xl bg-[#262933] border border-[#363a47] hover:bg-[#2f3341] transition-colors disabled:opacity-50 group"
+            >
+              <RefreshCw className={`w-5 h-5 text-[#4fffbc] ${isLoadingPrice ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+            </button>
           </div>
         </div>
 
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-[#cf68fb]" />
+        <div className="bg-[#16171D]/80 backdrop-blur-md p-6 rounded-2xl border border-[#262933] shadow-xl">
+          <h2 className="text-lg font-semibold flex items-center gap-2 mb-2 text-[#cf68fb]">
+            <TrendingUp className="w-5 h-5" />
             Stake Amount
           </h2>
-          <p className="text-sm text-gray-400 mt-1">Enter the amount to check the benefits of your stake</p>
-          <input
-            type="number"
-            placeholder="Enter amount to stake"
+          <p className="text-sm text-gray-400 mb-4">Enter the amount to check the benefits of your stake</p>
+          <NumberInput
             value={stakeAmount}
-            onChange={(e) => setStakeAmount(Math.max(0, parseFloat(e.target.value)))}
-            className="w-full px-4 py-2 rounded-lg bg-[#262933] border border-[#363a47] focus:outline-none focus:border-[#4fffbc]"
+            onChange={setStakeAmount}
+            step={100}
+            placeholder="0"
           />
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="p-6 bg-[#262933] rounded-xl">
-          <h2 className="text-xl font-semibold mb-4">Next Tier</h2>
+        <div className="bg-[#16171D]/80 backdrop-blur-md p-6 rounded-2xl border border-[#262933] shadow-xl flex-1">
+          <h2 className="text-lg font-semibold mb-4 text-white">Next Tier Goal</h2>
           {nextTier ? (
-            <>
-              <p className="text-lg font-medium">{nextTier.reward}</p>
-              <p className="text-gray-400">
-                Stake {(nextTier.amount - stakeAmount).toLocaleString()} more ISLAND to unlock
+            <div className="text-center py-4">
+              <p className="text-xl font-bold text-[#ffe500] mb-2">{nextTier.reward}</p>
+              <p className="text-sm text-gray-400">
+                Stake <span className="text-white font-mono">{(nextTier.amount - stakeAmount).toLocaleString()}</span> more ISLAND to unlock
               </p>
-            </>
+              <div className="mt-4 h-2 bg-[#262933] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-[#ffe500] to-[#cf68fb]"
+                  style={{ width: `${(stakeAmount / nextTier.amount) * 100}%` }}
+                />
+              </div>
+            </div>
           ) : (
-            <p className="text-gray-400">You've reached the highest tier!</p>
+            <div className="text-center py-8 text-[#4fffbc]">
+              <p className="text-xl font-bold">Max Tier Reached!</p>
+            </div>
           )}
         </div>
+      </div>
 
-        <div className="p-6 bg-[#262933] rounded-xl">
-          <h2 className="text-xl font-semibold mb-4">Unlocked Rewards</h2>
-          {unlockedTiers.length > 0 ? (
+      {/* Middle Column: Benefits */}
+      <div className="lg:col-span-8 flex flex-col gap-6 overflow-y-auto pr-2">
+        <div className="bg-[#16171D]/80 backdrop-blur-md p-6 rounded-2xl border border-[#262933] shadow-xl h-full">
+          <h2 className="text-lg font-semibold mb-6 text-white">Staking Benefits</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Bloom Boost */}
+            <div className="bg-[#262933]/50 p-4 rounded-xl border border-[#363a47]">
+              <h4 className="text-[#4fffbc] font-medium mb-1">Island Bloom Boost</h4>
+              <p className="text-xs text-gray-400 mb-3">Increase blooms earned on your island.</p>
+              <div className="space-y-2 text-sm">
+                <p className={`flex items-center ${getBoostClass(7500)}`}>{stakeAmount >= 7500 && <CheckMark />} Small (7,500 ISLAND)</p>
+                <p className={`flex items-center ${getBoostClass(15000)}`}>{stakeAmount >= 15000 && <CheckMark />} Medium (15,000 ISLAND)</p>
+                <p className={`flex items-center ${getBoostClass(30000)}`}>{stakeAmount >= 30000 && <CheckMark />} Large (30,000 ISLAND)</p>
+              </div>
+            </div>
+
+            {/* Other Rewards */}
             <div className="space-y-4">
-              {unlockedTiers.map((tier, index) => (
-                <div key={index} className="flex items-center gap-3 text-[#4fffbc]">
-                  <div className="w-2 h-2 rounded-full bg-[#4fffbc]" />
-                  <p>{tier.reward}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-400">Stake at least 150 ISLAND to unlock rewards</p>
-          )}
-        </div>
-      </div>
-
-      <div className="p-6 bg-[#262933] rounded-xl mt-6">
-        <h2 className="text-xl font-semibold mb-2">Staking Benefits Calculator</h2>
-        <h3 className="text-lg font-semibold text-[#ffe500]">Consumables</h3>
-        <p className="text-gray-400 mb-4">Unlock free boosts, bloom rewards, and gacha spins by staking ISLAND!</p>
-        <div className="space-y-4">
-          <div className="flex justify-between items-center bg-[#2e313c] p-4 rounded-lg">
-            <div>
-              <h4 className="text-lg font-medium text-[#4fffbc]">Island Bloom Boost</h4>
-              <p className="text-sm text-gray-400">Increase the amount of blooms earned on your island for a short time.</p>
-            </div>
-            <div className="text-right">
-              <p className={`text-sm flex items-center ${getBoostClass(7500)}`}>{stakeAmount >= 7500 && <CheckMark />}0/3 Small - Stake at least 7,500 ISLAND</p>
-              <p className={`text-sm flex items-center ${getBoostClass(15000)}`}>{stakeAmount >= 15000 && <CheckMark />}0/2 Medium - Stake at least 15,000 ISLAND</p>
-              <p className={`text-sm flex items-center ${getBoostClass(30000)}`}>{stakeAmount >= 30000 && <CheckMark />}0/2 Large - Stake at least 30,000 ISLAND</p>
-            </div>
-          </div>
-          <div className="flex justify-between items-center bg-[#2e313c] p-4 rounded-lg">
-            <div>
-              <h4 className="text-lg font-medium text-[#4fffbc]">Bloom Reward Pass</h4>
-              <p className="text-sm text-gray-400">Mint any currently active bloom reward for free.</p>
-            </div>
-            <div className="text-right">
-              <p className={`text-sm ${getBoostClass(1000)}`}>{stakeAmount >= 1000 && <CheckMark />}0/5 - Earning rate 1 every 59 days</p>
-            </div>
-          </div>
-          <div className="flex justify-between items-center bg-[#2e313c] p-4 rounded-lg">
-            <div>
-              <h4 className="text-lg font-medium text-[#4fffbc]">Gacha Spin</h4>
-              <p className="text-sm text-gray-400">Spin the Bloom Gacha once for free.</p>
-            </div>
-            <div className="text-right">
-              <p className={`text-sm ${getBoostClass(150)}`}>{stakeAmount >= 150 && <CheckMark />}0/10 - Earning rate 1 every 10 days</p>
+              <div className="bg-[#262933]/50 p-4 rounded-xl border border-[#363a47]">
+                <h4 className="text-[#4fffbc] font-medium mb-1">Bloom Reward Pass</h4>
+                <p className="text-xs text-gray-400 mb-2">Mint active bloom rewards for free.</p>
+                <p className={`text-sm flex items-center ${getBoostClass(1000)}`}>{stakeAmount >= 1000 && <CheckMark />} Unlocked (1,000 ISLAND)</p>
+              </div>
+              <div className="bg-[#262933]/50 p-4 rounded-xl border border-[#363a47]">
+                <h4 className="text-[#4fffbc] font-medium mb-1">Gacha Spin</h4>
+                <p className="text-xs text-gray-400 mb-2">Spin the Bloom Gacha for free.</p>
+                <p className={`text-sm flex items-center ${getBoostClass(150)}`}>{stakeAmount >= 150 && <CheckMark />} Unlocked (150 ISLAND)</p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="text-sm text-gray-400">
-        <p className="mb-2">Disclaimers:</p>
-        <ul className="list-disc list-inside space-y-1">
-          <li>This calculator is for approximation purposes only and some error due to the exact time of staking and fluctuation of token price should be expected.</li>
-          <li>The staking benefits and structure may change over time, so this version of the calculator may be outdated.</li>
-        </ul>
       </div>
     </div>
-  );
-}
-
-function MainCalculator() {
-  const [activeTab, setActiveTab] = React.useState('p2e');
-
-  React.useEffect(() => {
-    document.title = "Nifty Island P2E Calculator";
-  }, []);
-
-  return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="flex gap-4 mb-8">
-        <button
-          onClick={() => setActiveTab('p2e')}
-          className={`px-6 py-3 rounded-lg font-medium transition-all ${
-            activeTab === 'p2e'
-              ? 'bg-gradient-to-r from-[#ffe500] via-[#cf68fb] to-[#4fffbc] text-black'
-              : 'bg-[#262933] text-white hover:bg-[#2e313c]'
-          }`}
-        >
-          Play to Earn Calculator
-        </button>
-        <button
-          onClick={() => setActiveTab('stake')}
-          className={`px-6 py-3 rounded-lg font-medium transition-all ${
-            activeTab === 'stake'
-              ? 'bg-gradient-to-r from-[#ffe500] via-[#cf68fb] to-[#4fffbc] text-black'
-              : 'bg-[#262933] text-white hover:bg-[#2e313c]'
-          }`}
-        >
-          Stake to Earn Calculator
-        </button>
-      </div>
-
-      <div className="flex">
-        <div className="flex-1 mr-8">
-          <div className="bg-[#16171D] rounded-xl p-6 border border-[#262933]">
-            {activeTab === 'p2e' ? <PlayToEarnCalculator /> : <StakeToEarnCalculator />}
-          </div>
-        </div>
-        <aside className="w-64 p-4 bg-[#16171D] text-white rounded-xl border border-[#262933]">
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-2">Featured Island</h3>
-            <div className="p-4 bg-[#262933] rounded-lg">
-              <p className="mb-2">Island Name: FlashPoint</p>
-              <a
-                href="https://niftyis.land/f7ash/flashpoint?ref=f7ash"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block px-4 py-2 rounded-lg text-black font-semibold"
-                style={{
-                  background: 'linear-gradient(90deg, #fde00a, #d373e4, #5bf1c2)'
-                }}
-              >
-                Visit Island
-              </a>
-            </div>
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold mb-2">Promoted Island</h3>
-            <div className="p-4 bg-[#262933] rounded-lg">
-              <p className="mb-2">Your Name</p>
-              <p className="text-sm text-gray-400 mb-2">Your island could be here</p>
-              <a
-                href="https://niftyis.land/f7ash/flashpoint?ref=f7ash"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block px-4 py-2 rounded-lg text-black font-semibold"
-                style={{
-                  background: 'linear-gradient(90deg, #fde00a, #d373e4, #5bf1c2)'
-                }}
-              >
-                Visit Island
-              </a>
-            </div>
-          </div>
-        </aside>
-      </div>
-    </div>
-  );
-}
-
-function Header() {
-  return (
-    <header className="bg-[#16171D] border-b border-[#262933] p-6">
-      <div className="container mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Palmtree className="w-8 h-8 text-[#4fffbc]" />
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#ffe500] via-[#cf68fb] to-[#4fffbc] text-transparent bg-clip-text">
-            Nifty Island Calculator
-          </h1>
-        </div>
-      </div>
-    </header>
-  );
-}
-
-function Footer() {
-  return (
-    <footer className="bg-[#16171D] text-white p-4 mt-8 border-t border-[#262933]">
-      <div className="flex justify-between items-center">
-        <p className="text-lg font-semibold">Support the creator</p>
-        <div className="flex items-center gap-4">
-          <a
-            href="https://niftyis.land/f7ash/flashpoint?ref=f7ash"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block px-4 py-2 rounded-lg text-black font-semibold"
-            style={{
-              background: 'linear-gradient(90deg, #fde00a, #d373e4, #5bf1c2)'
-            }}
-          >
-            Visit Island
-          </a>
-          <a
-            href="https://x.com/rjarivi"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <img src="https://cdn.brandfetch.io/idS5WhqBbM/theme/light/logo.svg?c=1bfwsmEH20zzEfSNTed" alt="X.com Logo" className="w-6 h-6" />
-          </a>
-        </div>
-      </div>
-    </footer>
   );
 }
 
 function App() {
+  const [activeTab, setActiveTab] = React.useState('p2e');
+
   return (
-    <div className="min-h-screen bg-[#0F1014] text-white">
-      <style>{`
-        @media (max-width: 600px) {
-          .App {
-            padding: 10px;
-            font-size: 14px;
-          }
-          /* Adjust other styles as needed */
-        }
-      `}</style>
-      <Header />
-      <MainCalculator />
-      <Footer />
+    <div className="h-full flex flex-col bg-[#0F1014] text-white font-sans selection:bg-[#4fffbc]/30">
+      {/* Header */}
+      <header className="flex-none px-6 py-4 bg-[#16171D]/50 backdrop-blur-md border-b border-[#262933] flex items-center justify-between z-50">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-[#262933] rounded-lg border border-[#363a47]">
+            <Palmtree className="w-6 h-6 text-[#4fffbc]" />
+          </div>
+          <h1 className="text-xl font-bold bg-gradient-to-r from-[#ffe500] via-[#cf68fb] to-[#4fffbc] text-transparent bg-clip-text">
+            Nifty Island Calculator
+          </h1>
+        </div>
+
+        <div className="flex bg-[#262933] p-1 rounded-xl border border-[#363a47]">
+          <button
+            onClick={() => setActiveTab('p2e')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'p2e'
+              ? 'bg-[#0F1014] text-white shadow-lg'
+              : 'text-gray-400 hover:text-white'
+              }`}
+          >
+            Play to Earn
+          </button>
+          <button
+            onClick={() => setActiveTab('stake')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'stake'
+              ? 'bg-[#0F1014] text-white shadow-lg'
+              : 'text-gray-400 hover:text-white'
+              }`}
+          >
+            Stake to Earn
+          </button>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 p-6 overflow-hidden relative">
+        {/* Background Glows */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#cf68fb]/10 rounded-full blur-[128px] pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#4fffbc]/10 rounded-full blur-[128px] pointer-events-none" />
+
+        <div className="relative h-full max-w-[1920px] mx-auto">
+          {activeTab === 'p2e' ? <PlayToEarnCalculator /> : <StakeToEarnCalculator />}
+        </div>
+      </main>
     </div>
   );
 }
