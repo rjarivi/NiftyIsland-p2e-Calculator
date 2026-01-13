@@ -3,34 +3,50 @@
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 
+/* Import Outfit Font */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
 @layer base {
 
   html,
   body {
-    @apply h-full overflow-hidden;
+    @apply h-full overflow-hidden font-sans antialiased;
   }
 
   body {
-    @apply bg-[#0F1014] text-white;
+    @apply bg-nifty-bg text-white;
+    background-image:
+      radial-gradient(circle at 15% 50%, rgba(207, 104, 251, 0.08) 0%, transparent 25%),
+      radial-gradient(circle at 85% 30%, rgba(79, 255, 188, 0.08) 0%, transparent 25%);
   }
 }
 
-/* Custom Scrollbar for internal containers if needed */
+@layer utilities {
+  .glass-panel {
+    @apply bg-nifty-card/60 backdrop-blur-xl border border-nifty-border/50 shadow-xl;
+  }
+
+  .glass-input {
+    @apply bg-nifty-hover/40 border border-nifty-border/50 text-white placeholder-gray-500 focus:border-nifty-green/50 focus:ring-1 focus:ring-nifty-green/20 transition-all duration-300;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-nifty-yellow via-nifty-purple to-nifty-green;
+  }
+}
+
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-[#16171D];
+  @apply bg-transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-[#262933] rounded-full;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-[#363a47];
+  @apply bg-nifty-border rounded-full hover:bg-nifty-green/50 transition-colors;
 }
 
 /* Hide number input spinners */
